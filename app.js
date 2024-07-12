@@ -13,7 +13,8 @@ import adminRouter from "./routes/admin.js";
 import chatRouter from "./routes/chat.js";
 import userRouter from "./routes/user.js";
 import { connectDB } from "./utils/features.js";
-import bodyParser from 'body-parser';
+import bodyParser from "body-parser";
+import {v2 as cloudinary} from 'cloudinary'
 
 const userSocketIDs = new Map();
 
@@ -22,6 +23,12 @@ dotenv.config({
 });
 
 connectDB(process.env.MONGO_URL);
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+})
 
 const app = express();
 const server = createServer(app);
@@ -35,7 +42,12 @@ const io = new Server(server, {});
 // createMessagesInAChat("6669e52a6605ccbed117a872",50)
 
 // here we are using middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
 app.use(bodyParser.urlencoded({ extended: true })); // or false
 app.use(express.json());
 app.use(express.urlencoded());
@@ -45,9 +57,9 @@ app.get("/", async (req, res) => {
   res.send("hello from this side");
 });
 
-app.use("/user", userRouter);
-app.use("/chat", chatRouter);
-app.use("/admin", adminRouter);
+app.use("/api/v1/user", userRouter);
+app.use("/api/v1/chat", chatRouter);
+app.use("/api/v1/admin", adminRouter);
 
 // yaha se socket ka kaam chal raha hai
 io.use((socket, next) => {});

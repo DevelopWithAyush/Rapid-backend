@@ -62,7 +62,7 @@ const getMyChat = TryCatch(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    transformedChats,
+    chats:transformedChats,
   });
 });
 const getMyGroup = TryCatch(async (req, res, next) => {

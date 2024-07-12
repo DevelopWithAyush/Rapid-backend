@@ -5,12 +5,13 @@ import { TryCatch } from "../middlewares/error.js"; // Ensure this path is corre
 import { Chat } from "../models/chat.js";
 import { Request } from "../models/request.js";
 import { User } from "../models/user.js";
-import { cookieOption, emitEvent, sendToken } from "../utils/features.js";
+import { cookieOption, emitEvent, sendToken, uploadFilesToCloudinary } from "../utils/features.js";
 import { ErrorHandler } from "../utils/utility.js";
 
 // Register user function
 const register = TryCatch(async (req, res, next) => {
-  const { name, userEmail, password, avatar } = req.body;
+  const { name, userEmail, password } = req.body;
+
 
   // Check if user already exists
   let user = await User.findOne({ userEmail });
@@ -18,6 +19,15 @@ const register = TryCatch(async (req, res, next) => {
     return next(new ErrorHandler("This email already exists", 404));
   }
 
+  const file = req.file;
+  // console.log(file) 
+  if(!file) return next(new ErrorHandler("Please upload Avatar",404))
+    const result = await uploadFilesToCloudinary([file])
+
+  const avatar = {
+    public_id: result[0].public_id,
+    url:result[0].url
+  }
   // Create new user
   user = new User({
     name,
@@ -66,7 +76,7 @@ const getMyProfile = TryCatch(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    data: user,
+    user,
   });
 });
 
