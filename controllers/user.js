@@ -5,13 +5,17 @@ import { TryCatch } from "../middlewares/error.js"; // Ensure this path is corre
 import { Chat } from "../models/chat.js";
 import { Request } from "../models/request.js";
 import { User } from "../models/user.js";
-import { cookieOption, emitEvent, sendToken, uploadFilesToCloudinary } from "../utils/features.js";
+import {
+  cookieOption,
+  emitEvent,
+  sendToken,
+  uploadFilesToCloudinary,
+} from "../utils/features.js";
 import { ErrorHandler } from "../utils/utility.js";
 
 // Register user function
 const register = TryCatch(async (req, res, next) => {
   const { name, userEmail, password } = req.body;
-
 
   // Check if user already exists
   let user = await User.findOne({ userEmail });
@@ -20,14 +24,13 @@ const register = TryCatch(async (req, res, next) => {
   }
 
   const file = req.file;
-  // console.log(file) 
-  if(!file) return next(new ErrorHandler("Please upload Avatar",404))
-    const result = await uploadFilesToCloudinary([file])
+  if (!file) return next(new ErrorHandler("Please upload Avatar", 404));
+  const result = await uploadFilesToCloudinary([file]);
 
   const avatar = {
     public_id: result[0].public_id,
-    url:result[0].url
-  }
+    url: result[0].url,
+  };
   // Create new user
   user = new User({
     name,
@@ -92,7 +95,6 @@ const logout = TryCatch(async (req, res) => {
 
 const searchUser = TryCatch(async (req, res, next) => {
   const { name = "" } = req.query;
-
   const myChats = await Chat.find({ groupChat: false, members: req.user });
 
   // alll user from which i have done chat
@@ -133,7 +135,7 @@ const sendFriendRequest = TryCatch(async (req, res, next) => {
 
   emitEvent(req, NEW_REQUEST, userId);
 
-  res.status(201).json({ message: "Friend request sent" });
+  res.status(201).json({ message: `Friend request sent ` });
 });
 
 const acceptFriendRequest = TryCatch(async (req, res, next) => {
@@ -206,23 +208,32 @@ const getMyFriends = TryCatch(async (req, res, next) => {
     groupChat: false,
   }).populate("members", "name avatar");
 
-  const friends = chats.map(({ members }) => {
-    const otherUser = members.find(member => member._id.toString() !== req.user.toString());
+  const friends = chats
+    .map(({ members }) => {
+      const otherUser = members.find(
+        (member) => member._id.toString() !== req.user.toString()
+      );
 
-    if (otherUser) {
-      return {
-        _id: otherUser._id,
-        name: otherUser.name,
-        avatar: otherUser.avatar.url,
-      };
-    }
-  }).filter(Boolean); // Remove undefined values
+      if (otherUser) {
+        return {
+          _id: otherUser._id,
+          name: otherUser.name,
+          avatar: otherUser.avatar.url,
+        };
+      }
+    })
+    .filter(Boolean); // Remove undefined values
 
   if (chatId) {
     const chat = await Chat.findById(chatId);
 
-    // this show's that is we pass any chat id the it will suggest you that user which are not part of that group chat 
-    const availableFriends = friends.filter(friend => !chat.members.some(member => member._id.toString() === friend._id.toString()));
+    // this show's that is we pass any chat id the it will suggest you that user which are not part of that group chat
+    const availableFriends = friends.filter(
+      (friend) =>
+        !chat.members.some(
+          (member) => member._id.toString() === friend._id.toString()
+        )
+    );
     return res.status(200).json({
       success: true,
       availableFriends,
@@ -233,17 +244,17 @@ const getMyFriends = TryCatch(async (req, res, next) => {
       friends,
     });
   }
- 
 });
 
 // Export functions
 export {
   acceptFriendRequest,
   getAllNotification,
-  getMyFriends, getMyProfile,
+  getMyFriends,
+  getMyProfile,
   login,
   logout,
   register,
   searchUser,
-  sendFriendRequest
+  sendFriendRequest,
 };

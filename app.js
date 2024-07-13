@@ -44,7 +44,7 @@ const io = new Server(server, {});
 // here we are using middleware
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", "https://rapid-frontend-git-master-developwithayushs-projects.vercel.app/"],
     credentials: true,
   })
 );
@@ -119,3 +119,4 @@ export { userSocketIDs };
 server.listen(5000, () => {
   console.log("server listening on port 5000");
 });
+
