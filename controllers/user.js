@@ -101,7 +101,7 @@ const searchUser = TryCatch(async (req, res, next) => {
   const allUserFromChats = myChats.flatMap((chat) => chat.members);
 
   const allUsersExceptMeAndFriends = await User.find({
-    _id: { $nin: allUserFromChats },
+    _id: { $nin: [req.user, ...allUserFromChats] },
     name: { $regex: name, $options: "i" },
   });
 
@@ -166,7 +166,7 @@ const acceptFriendRequest = TryCatch(async (req, res, next) => {
       members,
       name: `${request.sender.name}-${request.receiver.name}`,
     }),
-    // request.deleteOne()
+    request.deleteOne()
   ]);
 
   emitEvent(req, REFETCH_CHATS, members);

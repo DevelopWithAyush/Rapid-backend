@@ -14,7 +14,9 @@ import chatRouter from "./routes/chat.js";
 import userRouter from "./routes/user.js";
 import { connectDB } from "./utils/features.js";
 import bodyParser from "body-parser";
-import {v2 as cloudinary} from 'cloudinary'
+import { v2 as cloudinary } from "cloudinary";
+import { corsOption } from "./constants/config.js";
+import { socketAuthenticator } from "./middlewares/auth.js";
 
 const userSocketIDs = new Map();
 
@@ -28,12 +30,18 @@ cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
-})
+});
 
 const app = express();
 const server = createServer(app);
 
-const io = new Server(server, {});
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
 
 // createUser(10)
 // createSingleChats(10);
@@ -42,12 +50,7 @@ const io = new Server(server, {});
 // createMessagesInAChat("6669e52a6605ccbed117a872",50)
 
 // here we are using middleware
-app.use(
-  cors({
-    origin: ["http://localhost:3000", "https://rapid-frontend-git-master-developwithayushs-projects.vercel.app/"],
-    credentials: true,
-  })
-);
+app.use(cors(corsOption));
 app.use(bodyParser.urlencoded({ extended: true })); // or false
 app.use(express.json());
 app.use(express.urlencoded());
@@ -62,17 +65,22 @@ app.use("/api/v1/chat", chatRouter);
 app.use("/api/v1/admin", adminRouter);
 
 // yaha se socket ka kaam chal raha hai
-io.use((socket, next) => {});
+io.use((socket, next) => {
+  cookieParser()(
+    socket.request,
+    socket.request.res,
+    async (err) => await socketAuthenticator(err, socket, next)
+  );
+});
 
 io.on("connection", (socket) => {
-  const user = {
-    _id: "adsfadfaf",
-    name: "namego",
-  };
+  // console.log(`user connect with ${socket.id}`);
+  const user = socket.user
+  // console.log(user)
 
   // yaha pe ho ye raha hai ki jo bhi user aa raha hai vo uska userId socketId se map ho ja raha hai
   userSocketIDs.set(user._id.toString(), socket.id);
-  console.log(userSocketIDs);
+  // console.log(userSocketIDs);
   socket.on(NEW_MESSAGE, async ({ chatId, members, message }) => {
     const messageForRealTime = {
       content: message,
@@ -80,6 +88,7 @@ io.on("connection", (socket) => {
       sender: {
         _id: user._id,
         name: user.name,
+        avatar:user.avatar
       },
       chatId,
       createdAt: new Date().toISOString(),
@@ -90,7 +99,6 @@ io.on("connection", (socket) => {
       sender: user._id,
       chat: chatId,
     };
-
     const memberSocket = getSockets(members); //isse humko user socket mil jayega
     io.to(memberSocket).emit(NEW_MESSAGE, {
       chatId,
@@ -119,4 +127,3 @@ export { userSocketIDs };
 server.listen(5000, () => {
   console.log("server listening on port 5000");
 });
-
