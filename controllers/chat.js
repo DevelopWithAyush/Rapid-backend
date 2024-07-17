@@ -1,6 +1,7 @@
 import {
   ALERT,
   NEW_ATTACHMENT,
+  NEW_MESSAGE,
   NEW_MESSAGE_ALERT,
   REFETCH_CHATS,
 } from "../constants/events.js";
@@ -9,7 +10,7 @@ import { TryCatch } from "../middlewares/error.js";
 import { Chat } from "../models/chat.js";
 import { Message } from "../models/message.js";
 import { User } from "../models/user.js";
-import { deleteFilesFromCloudinary, emitEvent } from "../utils/features.js";
+import { deleteFilesFromCloudinary, emitEvent, uploadFilesToCloudinary } from "../utils/features.js";
 import { ErrorHandler } from "../utils/utility.js";
 
 const newGroupChat = TryCatch(async (req, res, next) => {
@@ -219,7 +220,7 @@ const sentAttachments = TryCatch(async (req, res, next) => {
   const { chatId } = req.body;
   const [chat, me] = await Promise.all([
     Chat.findById(chatId),
-    User.findById(req.user, "name"),
+    User.findById(req.user, "name avatar"),
   ]);
 
   if (!chat) return next(new ErrorHandler("chat not found", 404));
@@ -232,7 +233,7 @@ const sentAttachments = TryCatch(async (req, res, next) => {
     return next(new ErrorHandler("please provide only 5 attachments", 400));
 
   // upload file here that with cloudinary
-  const attachments = [];
+  const attachments = await uploadFilesToCloudinary(files);
 
   // we are sending two message one to for frontend and second for to save it in mongodb
 
@@ -247,16 +248,17 @@ const sentAttachments = TryCatch(async (req, res, next) => {
     sender: {
       _id: me._id,
       name: me.name,
+      avatar:me.avatar
     },
   };
 
-  const message = await Message.create(messageForDB);
-
-  emitEvent(req, NEW_ATTACHMENT, chat.members, {
+  
+  emitEvent(req, NEW_MESSAGE, chat.members, {
     message: messageForRealTime,
     chatId,
   });
-
+  
+  const message = await Message.create(messageForDB);
   emitEvent(req, NEW_MESSAGE_ALERT, chat.members, {
     chatId,
   });

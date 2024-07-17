@@ -133,7 +133,7 @@ const sendFriendRequest = TryCatch(async (req, res, next) => {
     receiver: userId,
   });
 
-  emitEvent(req, NEW_REQUEST, userId);
+  emitEvent(req, NEW_REQUEST, [userId]);
 
   res.status(201).json({ message: `Friend request sent ` });
 });

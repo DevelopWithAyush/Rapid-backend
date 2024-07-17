@@ -5,7 +5,7 @@ import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { v4 } from "uuid";
-import { NEW_MESSAGE, NEW_MESSAGE_ALERT } from "./constants/events.js";
+import { NEW_MESSAGE, NEW_MESSAGE_ALERT, START_TYPING, STOP_TYPING } from "./constants/events.js";
 import { getSockets } from "./lib/helper.js";
 import { errorMiddleware } from "./middlewares/error.js";
 import { Message } from "./models/message.js";
@@ -15,7 +15,6 @@ import userRouter from "./routes/user.js";
 import { connectDB } from "./utils/features.js";
 import bodyParser from "body-parser";
 import { v2 as cloudinary } from "cloudinary";
-import { corsOption } from "./constants/config.js";
 import { socketAuthenticator } from "./middlewares/auth.js";
 
 const userSocketIDs = new Map();
@@ -37,11 +36,13 @@ const server = createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", process.env.React_URL],
     methods: ["GET", "POST"],
     credentials: true,
   },
 });
+
+app.set("io",io)
 
 // createUser(10)
 // createSingleChats(10);
@@ -50,7 +51,13 @@ const io = new Server(server, {
 // createMessagesInAChat("6669e52a6605ccbed117a872",50)
 
 // here we are using middleware
-app.use(cors(corsOption));
+app.use(cors({
+  origin: [
+    "http://localhost:3000",
+    process.env.REACT_URL
+  ],
+  credentials: true,
+}));
 app.use(bodyParser.urlencoded({ extended: true })); // or false
 app.use(express.json());
 app.use(express.urlencoded());
@@ -111,8 +118,17 @@ io.on("connection", (socket) => {
     } catch (error) {
       console.log(error);
     }
-    console.log("New message", messageForRealTime, memberSocket);
   });
+
+  socket.on(START_TYPING, ({members,chatId}) => {
+    const memberSocket = getSockets(members)
+    io.to(memberSocket).emit(START_TYPING,{chatId})
+  })
+
+  socket.on(STOP_TYPING, ({members,chatId }) => {
+    const memberSocket = getSockets(members)
+    io.to(memberSocket).emit(STOP_TYPING,{chatId})
+  })
 
   socket.on("disconnect", () => {
     console.log("user disconnected");
